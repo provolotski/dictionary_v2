@@ -51,7 +51,7 @@ async def get_dictionary_structure(dictionary: int):
 
 @dict_router.get(path='/dictionary/')
 @dict_router.post(path='/dictionary/')
-async def get_dictionary(dictionary:int, date: Optional[datetime.date] = None):
+async def get_dictionary(dictionary: int, date: Optional[datetime.date] = None):
     """
     Получение всех значения справочника
     :param date: дата на которую нужно получить справочник, если не заполнена  - текущая
@@ -62,43 +62,40 @@ async def get_dictionary(dictionary:int, date: Optional[datetime.date] = None):
     if date is None:
         date = datetime.date.today()
 
-    return await eisgs_dict.get_dictionary_values(dictionary,date)
+    return await eisgs_dict.get_dictionary_values(dictionary, date)
 
 
 @dict_router.get(path='/dictionaryValueByCode/')
 @dict_router.post(path='/dictionaryValueByCode/')
-async def get_dictionary_value_by_code(dictionary:int, code:str,  date: Optional[datetime.date] = None):
+async def get_dictionary_value_by_code(dictionary: int, code: str,  date: Optional[datetime.date] = None):
     logger.debug(f'endpoint получение  значений по коду dictionary ={dictionary}, code={code}, date = {date}')
     if code is None:
-        return JSONResponse(content='код не может быть пустым',status_code=404)
+        return JSONResponse(content='код не может быть пустым', status_code=404)
     if date is None:
         date = datetime.date.today()
-    return await eisgs_dict.get_dictionary_position_by_code(dictionary,code,date)
-
+    return await eisgs_dict.get_dictionary_position_by_code(dictionary, code, date)
 
 
 @dict_router.get(path='/dictionaryValueByID')
 @dict_router.post(path='/dictionaryValueByID')
-async def get_dictionary_value_by_id(dictionary:int, id:int,date:Optional[datetime.date] = None):
-    logger.debug(f'endpoint получение  значений по коду dictionary ={dictionary}, id={id}, date = {date}')
+async def get_dictionary_value_by_id(dictionary: int, position_id: int, date: Optional[datetime.date] = None):
+    logger.debug(f'endpoint получение  значений по коду dictionary ={dictionary}, id={position_id}, date = {date}')
     if id is None:
         return JSONResponse(content='код не может быть пустым', status_code=404)
     if date is None:
         date = datetime.date.today()
-    return await eisgs_dict.get_dictionary_position_by_id(dictionary,id,date)
-
+    return await eisgs_dict.get_dictionary_position_by_id(dictionary, id, date)
 
 
 @dict_router.get(path='/findDictionaryByName')
 @dict_router.post(path='/findDictionaryByName')
-async def find_dictionary_by_name(name:str):
+async def find_dictionary_by_name(name: str):
     logger.debug(f'endpoint поиск справочника по имени {name}')
     return await eisgs_dict.find_dictionary_by_name(name)
 
 
-
 @dict_router.get(path='/findDictionaryValue')
 @dict_router.post(path='/findDictionaryValue')
-async def find_dictionary_value(dictionary:int,findstr:str):
-    logger.debug(f'endpoint поиск значений справочника  по имени {findstr}')
+async def find_dictionary_value(dictionary: int, findstr: str):
+    logger.debug(f'endpoint поиск значений справочника  по имени {findstr} в справочнике {dictionary}')
     return await eisgs_dict.find_dictionary_by_name(findstr)
