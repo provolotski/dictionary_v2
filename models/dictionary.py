@@ -92,8 +92,8 @@ async def find_dictionary_by_name (name:str) ->list[schemas.DictionaryOut]:
     """
     logger.debug(f'поиск справочника по имени поисковая строка:{name}')
     return [
-        schemas.DictionaryOut(id=1,name='справочник 1',code='asdasd'),
-        schemas.DictionaryOut(id=2, name='справочник 1', code='asdasd')
+        schemas.DictionaryOut(id=1,name='справочник 1',code='asdasd', description='asdasdasdasd'),
+        schemas.DictionaryOut(id=2, name='справочник 1', code='asdasd', description='asdasdasdasd')
     ]
 
 async def find_dictionary_position_by_expression(dictionary:int, find_str:str)->list[schemas.DictionaryPosition]:

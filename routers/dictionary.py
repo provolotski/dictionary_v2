@@ -31,7 +31,7 @@ async def create_new_dictionary(dictionary: DictionaryIn):
 @dict_router.get(path='/list', response_model=list[DictionaryOut])
 async def list_dictionaries():
     """
-    получение перечня всех справочников
+    Получение перечня всех справочников
     :return: набор справочников
     """
     logger.debug('получаем список справочников')
@@ -42,7 +42,7 @@ async def list_dictionaries():
 @dict_router.post(path='/structure/', response_model=list[Attribute])
 async def get_dictionary_structure(dictionary: int):
     """
-     получение структуры справочника
+     Получение структуры справочника
      :return: набор справочников
      """
     logger.debug('get получаем структуру справочника')
@@ -54,7 +54,7 @@ async def get_dictionary_structure(dictionary: int):
 async def get_dictionary(dictionary: int, date: Optional[datetime.date] = None):
     """
     Получение всех значения справочника
-    :param date: дата на которую нужно получить справочник, если не заполнена  - текущая
+    :param date: дата на которую нужно получить справочник, если не заполнена - текущая
     :param dictionary: идентификатор справочника
     :return: справочник целиком по структуре
     """
@@ -84,13 +84,13 @@ async def get_dictionary_value_by_id(dictionary: int, position_id: int, date: Op
         return JSONResponse(content='код не может быть пустым', status_code=404)
     if date is None:
         date = datetime.date.today()
-    return await eisgs_dict.get_dictionary_position_by_id(dictionary, id, date)
+    return await eisgs_dict.get_dictionary_position_by_id(dictionary, position_id, date)
 
 
 @dict_router.get(path='/findDictionaryByName')
 @dict_router.post(path='/findDictionaryByName')
 async def find_dictionary_by_name(name: str):
-    logger.debug(f'endpoint поиск справочника по имени {name}')
+    logger.debug(f'endpoint поиск справочника по имени {name} for')
     return await eisgs_dict.find_dictionary_by_name(name)
 
 
