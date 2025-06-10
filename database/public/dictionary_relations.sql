@@ -1,18 +1,13 @@
-create table dictionary_relations
+create table dictionary_positions
 (
-    id          integer generated always as identity
-        constraint dictionary_relations_pk
+    id            integer generated always as identity
+        constraint dictionary_positions_pk
             primary key,
-    id_master   integer
-        constraint dictionary_relations_dictionary_positions_id_fk
-            references dictionary_positions,
-    id_slave    integer
-        constraint dictionary_relations_dictionary_positions_id_fk_2
-            references dictionary_positions,
-    start_date  date,
-    finish_date date
+    id_dictionary integer
+        constraint dictionary_positions_dictionary_id_fk
+            references dictionary
 );
 
-alter table dictionary_relations
+alter table dictionary_positions
     owner to admin_eisgs;
 

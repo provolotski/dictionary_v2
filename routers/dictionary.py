@@ -1,9 +1,9 @@
-import datetime
+from datetime import date
 import logging
 from fastapi.responses import JSONResponse
 from fastapi import APIRouter
-from schemas import DictionaryOut, DictionaryIn, Attribute
-import models.dictionary as eisgs_dict
+from schemas import DictionaryOut, DictionaryIn, AttributeOut, AttributeDict
+import models.model_dictionary as eisgs_dict
 from typing import Optional
 
 from config import LOG_FILE, LOG_LEVEL
@@ -24,6 +24,12 @@ async def create_new_dictionary(dictionary: DictionaryIn):
     :return:
     """
     logger.debug('создаем новый справочник')
+    logger.debug(f'dictionary: {dictionary}')
+    logger.debug(dictionary.start_date)
+    if dictionary.start_date <= date.today() <= dictionary.finish_date:
+        dictionary.id_status = 4
+    else:
+        dictionary.id_status = 3
     await eisgs_dict.create_new_dictionary(dictionary)
     return JSONResponse(content={"message": ' errmessage'}, status_code=200)
 
@@ -38,8 +44,8 @@ async def list_dictionaries():
     return await eisgs_dict.get_dictionaries()
 
 
-@dict_router.get(path='/structure/', response_model=list[Attribute])
-@dict_router.post(path='/structure/', response_model=list[Attribute])
+@dict_router.get(path='/structure/', response_model=list[AttributeOut])
+@dict_router.post(path='/structure/', response_model=list[AttributeOut])
 async def get_dictionary_structure(dictionary: int):
     """
      Получение структуры справочника
@@ -48,10 +54,24 @@ async def get_dictionary_structure(dictionary: int):
     logger.debug('get получаем структуру справочника')
     return await eisgs_dict.get_dictionary_structure(dictionary)
 
+@dict_router.get(path='/add_attribute/', response_model=AttributeDict)
+@dict_router.post(path='/add_attribute/', response_model=AttributeDict)
+async def add_attribute(attribute: AttributeDict):
+    """
+     Добавление нового атрибута в справочник
+    :param attribute: описание атрибута
+    :return:
+    """
+    logger.debug('добавление атрибута в справочник')
+    await  eisgs_dict.create_attr_in_dictionary(attribute)
+    return JSONResponse(content={"message": ' errmessage'}, status_code=200)
+
+
+
 
 @dict_router.get(path='/dictionary/')
 @dict_router.post(path='/dictionary/')
-async def get_dictionary(dictionary: int, date: Optional[datetime.date] = None):
+async def get_dictionary(dictionary: int, date: Optional[date] = None):
     """
     Получение всех значения справочника
     :param date: дата на которую нужно получить справочник, если не заполнена - текущая
@@ -60,30 +80,30 @@ async def get_dictionary(dictionary: int, date: Optional[datetime.date] = None):
     """
     logger.debug('endpoint получения всех значения по справочнику')
     if date is None:
-        date = datetime.date.today()
+        date = date.today()
 
     return await eisgs_dict.get_dictionary_values(dictionary, date)
 
 
 @dict_router.get(path='/dictionaryValueByCode/')
 @dict_router.post(path='/dictionaryValueByCode/')
-async def get_dictionary_value_by_code(dictionary: int, code: str,  date: Optional[datetime.date] = None):
+async def get_dictionary_value_by_code(dictionary: int, code: str, date: Optional[date] = None):
     logger.debug(f'endpoint получение  значений по коду dictionary ={dictionary}, code={code}, date = {date}')
     if code is None:
         return JSONResponse(content='код не может быть пустым', status_code=404)
     if date is None:
-        date = datetime.date.today()
+        date = date.today()
     return await eisgs_dict.get_dictionary_position_by_code(dictionary, code, date)
 
 
 @dict_router.get(path='/dictionaryValueByID')
 @dict_router.post(path='/dictionaryValueByID')
-async def get_dictionary_value_by_id(dictionary: int, position_id: int, date: Optional[datetime.date] = None):
+async def get_dictionary_value_by_id(dictionary: int, position_id: int, date: Optional[date] = None):
     logger.debug(f'endpoint получение  значений по коду dictionary ={dictionary}, id={position_id}, date = {date}')
     if id is None:
         return JSONResponse(content='код не может быть пустым', status_code=404)
     if date is None:
-        date = datetime.date.today()
+        date = date.today()
     return await eisgs_dict.get_dictionary_position_by_id(dictionary, position_id, date)
 
 
