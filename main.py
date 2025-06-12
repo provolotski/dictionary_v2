@@ -4,6 +4,7 @@ from fastapi import FastAPI, APIRouter
 from routers.dictionary import dict_router
 from database import database
 from config import LOG_FILE, LOG_LEVEL
+from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi.openapi.docs import (
     get_redoc_html,
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info('Trying connect to database')
     await database.connect()
     logger.info('Connected to database')
     yield
@@ -34,6 +36,15 @@ api_router.include_router(dict_router)
 app = FastAPI(lifespan=lifespan, title='Сервис доступа к справочникам ЕИСГС', summary='Справочники ЕИСГС',
               version='2.0.0', docs_url=None, redoc_url=None)
 
+
+# Настройка CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Разрешает все домены (небезопасно для прода!)
+    allow_credentials=True,  # Разрешает куки и заголовки авторизации
+    allow_methods=["*"],  # Разрешает все методы (GET, POST, PUT и т. д.)
+    allow_headers=["*"],  # Разрешает все заголовки
+)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 

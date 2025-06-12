@@ -26,7 +26,7 @@ class DictionaryOut(DictionaryIn):
 
 class AttributeIn(BaseModel):
     name: str
-    type: int
+    id_attribute_type: int
     start_date: date
     finish_date: date
     required: bool

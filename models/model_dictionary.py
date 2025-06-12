@@ -4,6 +4,8 @@ import logging
 import schemas
 from database import database
 from config import LOG_FILE, LOG_LEVEL
+import models.model_attribute as da
+
 
 logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s %(name)-30s %(levelname)-8s %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S', handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()])
@@ -198,29 +200,28 @@ async def create_new_dictionary(dictionary: schemas.DictionaryIn):
 async def create_attr_in_dictionary(attribute: schemas.AttributeDict):
     logger.debug('create new attribute')
     sql = ('insert into dictionary_attribute '
-           '(id_dictionary, name, required, start_date, finish_date,  alt_name,type,capacity) '
+           '(id_dictionary, name, required, start_date, finish_date,  alt_name,id_attribute_type,capacity) '
            'values '
            '(:id_dictionary, :name, :required, :start_date, :finish_date, :alt_name, :type, :capacity) '
            'returning id')
     attr_id = await database.execute(sql, values=attribute.model_dump())
 
 
-async def get_dictionary_structure(dictionary_id: int) -> list[schemas.AttributeOut]:
+async def get_dictionary_structure(dictionary_id: int) -> list[schemas.AttributeIn]:
     logger.debug(f'получаем структуру справочника с id = {dictionary_id}')
-    """
-    # sql = "select * from dictionary_attribute where id_dictionary =:id"
-    # rows = await database.fetch_all(sql,values={"id":dictionary_id})
-    # return [Attribute(**dict(row)) for row in rows]
-    """
-    if dictionary_id is not None:
-        return [
-            schemas.Attribute(id=1, name='Наименование', type='строка', start_date=datetime.date(1900, 1, 1),
-                              end_date=datetime.date(9999, 12, 31),
-                              required=True, capacity=56, alt_name='Name'),
-            schemas.Attribute(id=1, name='Наименование ENG', type='строка', start_date=datetime.date(1900, 1, 1),
-                              end_date=datetime.date(9999, 12, 31),
-                              required=True, capacity=56, alt_name='Name_eng')
-        ]
+    sql = 'select id, name, id_attribute_type, start_date,finish_date,required,capacity, alt_name  from dictionary_attribute where id_dictionary =:id'
+    rows = await database.fetch_all(sql,values={"id":dictionary_id})
+    return [schemas.AttributeIn(**dict(row)) for row in rows]
+
+    # if dictionary_id is not None:
+    #     return [
+    #         schemas.Attribute(id=1, name='Наименование', type='строка', start_date=datetime.date(1900, 1, 1),
+    #                           end_date=datetime.date(9999, 12, 31),
+    #                           required=True, capacity=56, alt_name='Name'),
+    #         schemas.Attribute(id=1, name='Наименование ENG', type='строка', start_date=datetime.date(1900, 1, 1),
+    #                           end_date=datetime.date(9999, 12, 31),
+    #                           required=True, capacity=56, alt_name='Name_eng')
+    #     ]
 
 
 async def get_dictionary_values(dictionary_id: int, date: datetime.date) -> list[schemas.DictionaryPosition]:
@@ -285,3 +286,11 @@ async def find_dictionary_position_by_expression(dictionary: int, find_str: str)
         schemas.DictionaryPosition(id=2, parent_id=1, parent_code='100000000',
                                    attr=schemas.ListAttr(attrs=schemas.AttrShown(name='Название', value='Итого')))
     ]
+
+async def insert_dictionary_values(id_dictionary: int, dataframe) -> True|False:
+    try:
+        await da.insert_new_values(id_dictionary, dataframe)
+        return True
+    except Exception as e:
+        logger.error(e)
+        return False

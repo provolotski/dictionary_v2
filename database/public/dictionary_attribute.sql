@@ -10,8 +10,9 @@ create table dictionary_attribute
     required      boolean,
     start_date    date,
     finish_date   date,
-    dimension     integer,
-    alt_name      varchar
+    capacity    integer,
+    alt_name      varchar,
+    id_attribute_type integer
 );
 
 alter table dictionary_attribute
