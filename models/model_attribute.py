@@ -101,8 +101,46 @@ async def insert_attr_data(dictionary_id:int, position_id:int, attribute_name:st
 
 
 async def generate_relations_for_dictionary(dictionary_id:int):
-    None
+    """
+    Расставляем иерархию для справочника
+    :param dictionary_id:  идентификатор справочника
+    :return:
+    """
+    sql = "select id from dictionary_positions dp  where dp.id_dictionary =:id_dictionary"
+    rows = await database.fetch_all(sql, {'id_dictionary': dictionary_id})
+    for row in rows:
+        await update_relation_for_positions(row[0], dictionary_id)
 
+
+async def update_relation_for_positions(position_id:int, dictionary_id:int):
+    sql = "delete from dictionary_relations where id_positions = :id"
+    await database.execute(sql, {'id': position_id})
+    logger.debug('Предварительно очистили')
+    sql = "select dd.value, dd.start_date, dd.finish_date from dictionary_data dd, dictionary_attribute da   where dd.id_position =:id_position and dd.id_attribute =da.id and da.alt_name ='PARENT_CODE'"
+    rows = await database.fetch_all(sql, {'id_position': position_id})
+    logger.debug(f'Прочитали  Родителей для позиции {position_id}')
+    for row in rows:
+        logger.debug(f'Итерируемся {row}')
+        sql_attr = "select dd.id_position, dd.start_date, dd.finish_date  from dictionary_data dd, dictionary_attribute da   where dd.id_attribute =da.id and da.id_dictionary =:id_dictionary and da.alt_name ='CODE' and dd.value =cast (:parent_code as text) order by 2"
+        rows_attr = await database.fetch_all(sql_attr, {'id_dictionary': dictionary_id, 'parent_code':row['value']})
+        logger.debug('Прочитали  атрибуты')
+        for row_attr in rows_attr:
+            logger.debug(f' атрибуты {row_attr}')
+            if row_attr['start_date'] < row['finish_date'] and row_attr['finish_date'] > row['start_date']:
+                if row_attr['start_date'] > row['start_date']:
+                    start_date = row_attr['start_date']
+                else:
+                    start_date = row['start_date']
+                if row_attr['finish_date'] > row['finish_date']:
+                    finish_date = row_attr['finish_date']
+                else:
+                    finish_date = row['finish_date']
+                sql_ins = 'insert into dictionary_relations (id_positions, id_parent_positions, start_date, finish_date) values(:id_positions, :id_parent_positions, :start_date, :finish_date)'
+                try:
+                    await database.execute(sql_ins,{'id_positions':position_id, 'id_parent_positions':rows_attr['id_position'], 'start_date':start_date, 'finish_date':finish_date})
+                    logger.info(f'вставили успешно id_positions: {position_id}, id_parent_positions:{rows_attr['id_position']}, start_date:{start_date}, finish_date:{finish_date}')
+                except Exception as e:
+                    logger.error(f'Ошибка вставки id_positions: {position_id}, id_parent_positions:{rows_attr['id_position']}, start_date:{start_date}, finish_date:{finish_date}')
 
 async def insert_new_values(dictionary_id:int, df: pd.DataFrame):
     """

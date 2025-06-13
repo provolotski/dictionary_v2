@@ -91,7 +91,7 @@ async def get_dictionary(dictionary: int, date: Optional[date] = None):
     :param dictionary: идентификатор справочника
     :return: справочник целиком по структуре
     """
-    logger.debug('endpoint получения всех значения по справочнику')
+    logger.debug('endpoint получения всех значений справочника')
     if date is None:
         date = date.today()
 
@@ -150,3 +150,9 @@ async def import_csv(dictionary:int, file:UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка обработки файла: {str(e)}")
 
+
+@dict_router.post(path='/genRel')
+async def import_csv(dictionary:int):
+        await eisgs_dict.generate_relation(dictionary)
+        return JSONResponse(status_code=200, content={
+                "message": "Файл успешно обработан"})

@@ -1,5 +1,8 @@
 import datetime
 import logging
+from multiprocessing.util import debug
+
+from pandas.core.interchange import dataframe
 
 import schemas
 from database import database
@@ -294,3 +297,7 @@ async def insert_dictionary_values(id_dictionary: int, dataframe) -> True|False:
     except Exception as e:
         logger.error(e)
         return False
+
+
+async def generate_relation(id_dictionary):
+    await da.generate_relations_for_dictionary(id_dictionary)
