@@ -1,5 +1,4 @@
 import logging
-from logging import raiseExceptions
 
 import pandas as pd
 from datetime import date
@@ -13,61 +12,54 @@ logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s %(name)-30s %(levelname
 logger = logging.getLogger(__name__)
 
 
-
-async def get_start_date_dictionary(dictionary_id:int)->date:
+async def get_start_date_dictionary(dictionary_id: int) -> date:
     """
     Получаем дату начала действия справочника
     :param dictionary_id: идентификатор справочника
     :return: дата начала действия справочника
     """
-    sql = 'select d.start_date from "dictionary" d where d.id =:id'
-    row =  await database.fetch_one(sql, {'id': dictionary_id})
+    sql = 'select d.start_date from dictionary d where d.id =:id'
+    row = await database.fetch_one(sql, {'id': dictionary_id})
     return row['start_date']
 
-async def get_finish_date_dictionary(dictionary_id:int)->date:
+
+async def get_finish_date_dictionary(dictionary_id: int) -> date:
     """
       Получаем дату окончания действия справочника
       :param dictionary_id: идентификатор справочника
       :return: дата окончания действия справочника
       """
-    sql = 'select d.finish_date from "dictionary" d where d.id =:id'
-    row =  await database.fetch_one(sql, {'id': dictionary_id})
+    sql = 'select d.finish_date from dictionary d where d.id =:id'
+    row = await database.fetch_one(sql, {'id': dictionary_id})
     return row['finish_date']
 
-async def create_new_positions(dictionary_id:int)->int:
+
+async def create_new_positions(dictionary_id: int) -> int:
     """
     Создание новой позиции в справочнике
     :param dictionary_id: идентификатор справочника
-    :return: идетнификатор созданной позиции
+    :return: идентификатор созданной позиции
     """
     sql = 'insert into dictionary_positions (id_dictionary) values (:id_dictionary) returning id'
     row = await database.fetch_one(sql, {'id_dictionary': dictionary_id})
     return row['id']
 
 
-async def get_attribute_list(dictionary_id:int)->list:
+async def get_attribute_list(dictionary_id: int) -> list:
     """
      Получение атрибутов справочника
     :param dictionary_id: идентификатор справочника
     :return: list текстовых наименований Alt_names
     """
-    sql = 'select d.alt_name  from dictionary_attribute d where d.id_dictionary =:id_dictionary and d.alt_name is not null'
+    sql = ('select d.alt_name  from dictionary_attribute d where d.id_dictionary =:id_dictionary and d.alt_name is not '
+           'null')
     rows = await database.fetch_all(sql, values={"id_dictionary": dictionary_id})
     return [row[0] for row in rows]
 
 
-async def get_parent_id(dictionary_id:int, parent_code:str)->int:
+async def get_attribute_id(dictionary_id: int, attribute_name: str) -> int:
     """
-    Поиск родительской позиции в справочнике
-    :param dictionary_id: идентификатор справочника
-    :param parent_code: код родительской позиции
-    :return:
-    """
-    None
-
-async def get_attribute_id(dictionary_id:int, attribute_name:str)->int:
-    """
-    получаем идентификатор атрибута по alt имени и идентификатору справочника
+    Получаем идентификатор атрибута по alt имени и идентификатору справочника
     :param dictionary_id:
     :param attribute_name:
     :return:
@@ -77,10 +69,10 @@ async def get_attribute_id(dictionary_id:int, attribute_name:str)->int:
     return row['id']
 
 
-
-async def insert_attr_data(dictionary_id:int, position_id:int, attribute_name:str, value:str, start_date:date, finish_date:date):
+async def insert_attr_data(dictionary_id: int, position_id: int, attribute_name: str, value: str, start_date: date,
+                           finish_date: date):
     """
-    вставляем значение в справочник
+    Вставляем значение в справочник
     :param dictionary_id:
     :param position_id:
     :param attribute_name:
@@ -95,12 +87,14 @@ async def insert_attr_data(dictionary_id:int, position_id:int, attribute_name:st
     # Обработка NaN
     clean_value = None if str(value).strip().lower() in ('nan', 'none', 'null', '') else value
 
-    sql ='insert into dictionary_data (id_position, id_attribute, start_date, finish_date, value) values (:id_position, :id_attribute, :start_date, :finish_date, :value)'
-    await database.execute(sql,{'id_position':position_id, 'id_attribute':attribute_id, 'start_date':start_date, 'finish_date':finish_date, 'value':clean_value})
+    sql = ('insert into dictionary_data (id_position, id_attribute, start_date, finish_date, value) values ('
+           ':id_position, :id_attribute, :start_date, :finish_date, :value)')
+    await database.execute(sql, {'id_position': position_id, 'id_attribute': attribute_id, 'start_date': start_date,
+                                 'finish_date': finish_date, 'value': clean_value})
     logger.debug(f'вставил значение {value} для атрибута {attribute_name}')
 
 
-async def generate_relations_for_dictionary(dictionary_id:int):
+async def generate_relations_for_dictionary(dictionary_id: int):
     """
     Расставляем иерархию для справочника
     :param dictionary_id:  идентификатор справочника
@@ -112,37 +106,40 @@ async def generate_relations_for_dictionary(dictionary_id:int):
         await update_relation_for_positions(row[0], dictionary_id)
 
 
-async def update_relation_for_positions(position_id:int, dictionary_id:int):
+def is_valid_dates(row, row_attr) -> bool:
+    return row_attr['start_date'] < row['finish_date'] and row_attr['finish_date'] > row['start_date']
+
+
+async def update_relation_for_positions(position_id: int, dictionary_id: int):
     sql = "delete from dictionary_relations where id_positions = :id"
     await database.execute(sql, {'id': position_id})
-    logger.debug('Предварительно очистили')
-    sql = "select dd.value, dd.start_date, dd.finish_date from dictionary_data dd, dictionary_attribute da   where dd.id_position =:id_position and dd.id_attribute =da.id and da.alt_name ='PARENT_CODE'"
+    sql = ("select dd.value, dd.start_date, dd.finish_date from dictionary_data dd, dictionary_attribute da   where "
+           "dd.id_position =:id_position and dd.id_attribute =da.id and da.alt_name ='PARENT_CODE'")
     rows = await database.fetch_all(sql, {'id_position': position_id})
-    logger.debug(f'Прочитали  Родителей для позиции {position_id}')
     for row in rows:
-        logger.debug(f'Итерируемся {row}')
-        sql_attr = "select dd.id_position, dd.start_date, dd.finish_date  from dictionary_data dd, dictionary_attribute da   where dd.id_attribute =da.id and da.id_dictionary =:id_dictionary and da.alt_name ='CODE' and dd.value =cast (:parent_code as text) order by 2"
-        rows_attr = await database.fetch_all(sql_attr, {'id_dictionary': dictionary_id, 'parent_code':row['value']})
-        logger.debug('Прочитали  атрибуты')
+        sql_attr = ("select dd.id_position, dd.start_date, dd.finish_date  from dictionary_data dd, "
+                    "dictionary_attribute da   where dd.id_attribute =da.id and da.id_dictionary =:id_dictionary and "
+                    "da.alt_name ='CODE' and dd.value =cast (:parent_code as text) order by 2")
+        rows_attr = await database.fetch_all(sql_attr, {'id_dictionary': dictionary_id, 'parent_code': row['value']})
         for row_attr in rows_attr:
-            logger.debug(f' атрибуты {row_attr}')
-            if row_attr['start_date'] < row['finish_date'] and row_attr['finish_date'] > row['start_date']:
-                if row_attr['start_date'] > row['start_date']:
-                    start_date = row_attr['start_date']
-                else:
-                    start_date = row['start_date']
-                if row_attr['finish_date'] > row['finish_date']:
-                    finish_date = row_attr['finish_date']
-                else:
-                    finish_date = row['finish_date']
-                sql_ins = 'insert into dictionary_relations (id_positions, id_parent_positions, start_date, finish_date) values(:id_positions, :id_parent_positions, :start_date, :finish_date)'
+            if is_valid_dates(row, row_attr):
+                start_date = max(row_attr['start_date'], row['start_date'])
+                finish_date = min(row_attr['finish_date'], row['finish_date'])
+                sql_ins = ('insert into dictionary_relations (id_positions, id_parent_positions, start_date, '
+                           'finish_date) values(:id_positions, :id_parent_positions, :start_date, :finish_date)')
                 try:
-                    await database.execute(sql_ins,{'id_positions':position_id, 'id_parent_positions':rows_attr['id_position'], 'start_date':start_date, 'finish_date':finish_date})
-                    logger.info(f'вставили успешно id_positions: {position_id}, id_parent_positions:{rows_attr['id_position']}, start_date:{start_date}, finish_date:{finish_date}')
+                    await database.execute(sql_ins, {'id_positions': position_id, 'id_parent_positions': row_attr[0],
+                                                     'start_date': start_date, 'finish_date': finish_date})
+                    logger.info(
+                        f'вставили успешно id_positions: {position_id}, id_parent_positions:{row_attr[0]}, start_date:'
+                        f'{start_date}, finish_date:{finish_date}')
                 except Exception as e:
-                    logger.error(f'Ошибка вставки id_positions: {position_id}, id_parent_positions:{rows_attr['id_position']}, start_date:{start_date}, finish_date:{finish_date}')
+                    logger.error(
+                        f'Ошибка {str(e)} вставки id_positions: {position_id}, id_parent_positions:{row_attr[0]}, '
+                        f'start_date:{start_date}, finish_date:{finish_date}')
 
-async def insert_new_values(dictionary_id:int, df: pd.DataFrame):
+
+async def insert_new_values(dictionary_id: int, df: pd.DataFrame):
     """
     импорт значений справочника из pandas dataframe
     :param dictionary_id: идентификатор справочника
@@ -158,25 +155,14 @@ async def insert_new_values(dictionary_id:int, df: pd.DataFrame):
                 position_id = await create_new_positions(dictionary_id)
                 for col in cols:
                     if col in row:
-                        # if not pd.isna(row[col]):
                         logger.debug(f'нашел значение для {col}')
                         try:
-                            await insert_attr_data(dictionary_id, position_id, col, str(row[col]), start_date, finish_date)
+                            await insert_attr_data(dictionary_id, position_id, col, str(row[col]), start_date,
+                                                   finish_date)
                         except Exception as e:
-                            logger.error(f'При добавлении значения в колонку {col}  значения {row[col]} произошла ошибка {str(e)}')
+                            logger.error(
+                                f'При добавлении значения в колонку {col}  значения {row[col]} '
+                                f'произошла ошибка {str(e)}')
     else:
         logger.error('Не найдены поля NAME или CODE')
-        raise Exception("'Не найдены поля NAME или CODE")
-
-
-
-            # if 'PARENT_CODE' in row:
-            #     if pd.isna(row['PARENT_CODE']):
-            #         logger.debug(f'нет Parent Code для {row["NAME"]}')
-            #
-            #     else:
-            #         logger.debug(f'Parent Code для {row["PARENT_CODE"]}')
-            #         logger.debug(f'есть Parent Code для {row["NAME"]}')
-
-
-
+        raise ValueError('Не найдены поля NAME или CODE')

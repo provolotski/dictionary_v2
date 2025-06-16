@@ -1,14 +1,10 @@
 import datetime
 import logging
-from multiprocessing.util import debug
-
-from pandas.core.interchange import dataframe
 
 import schemas
 from database import database
 from config import LOG_FILE, LOG_LEVEL
 import models.model_attribute as da
-
 
 logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s %(name)-30s %(levelname)-8s %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S', handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()])
@@ -39,7 +35,6 @@ async def create_new_dictionary(dictionary: schemas.DictionaryIn):
 
     attr = schemas.AttributeDict(
         name="Наименование",
-        type=1,
         start_date=dictionary.start_date,
         finish_date=dictionary.finish_date,
         required=True,
@@ -47,11 +42,10 @@ async def create_new_dictionary(dictionary: schemas.DictionaryIn):
         alt_name="NAME",
         id_dictionary=dic_id
     )
-    attr_id = await create_attr_in_dictionary(attr)
+    await create_attr_in_dictionary(attr)
     # Код наименование
     attr = schemas.AttributeDict(
         name="Код",
-        type=1,
         start_date=dictionary.start_date,
         finish_date=dictionary.finish_date,
         required=True,
@@ -60,11 +54,10 @@ async def create_new_dictionary(dictionary: schemas.DictionaryIn):
         id_dictionary=dic_id
     )
 
-    attr_id = await create_attr_in_dictionary(attr)
+    await create_attr_in_dictionary(attr)
     # Код наименование
     attr = schemas.AttributeDict(
         name="Код родительской позиции",
-        type=1,
         start_date=dictionary.start_date,
         finish_date=dictionary.finish_date,
         required=True,
@@ -73,12 +66,11 @@ async def create_new_dictionary(dictionary: schemas.DictionaryIn):
         id_dictionary=dic_id
     )
 
-    attr_id = await create_attr_in_dictionary(attr)
+    await create_attr_in_dictionary(attr)
 
     # Признак полноты
     attr = schemas.AttributeDict(
         name="Признак полноты итога",
-        type=3,
         start_date=dictionary.start_date,
         finish_date=dictionary.finish_date,
         required=True,
@@ -87,12 +79,11 @@ async def create_new_dictionary(dictionary: schemas.DictionaryIn):
         id_dictionary=dic_id
     )
 
-    attr_id = await create_attr_in_dictionary(attr)
+    await create_attr_in_dictionary(attr)
 
     # Признак полноты
     attr = schemas.AttributeDict(
         name="Дата начала действия позиции",
-        type=3,
         start_date=dictionary.start_date,
         finish_date=dictionary.finish_date,
         required=True,
@@ -101,12 +92,11 @@ async def create_new_dictionary(dictionary: schemas.DictionaryIn):
         id_dictionary=dic_id
     )
 
-    attr_id = await create_attr_in_dictionary(attr)
+    await create_attr_in_dictionary(attr)
 
     # Признак полноты
     attr = schemas.AttributeDict(
         name="Дата окончания действия позиции",
-        type=3,
         start_date=dictionary.start_date,
         finish_date=dictionary.finish_date,
         required=True,
@@ -115,13 +105,12 @@ async def create_new_dictionary(dictionary: schemas.DictionaryIn):
         id_dictionary=dic_id
     )
 
-    attr_id = await create_attr_in_dictionary(attr)
+    await create_attr_in_dictionary(attr)
 
     # Поле наименование
 
     attr = schemas.AttributeDict(
         name="Наименование на белорусском языке",
-        type=1,
         start_date=dictionary.start_date,
         finish_date=dictionary.finish_date,
         required=True,
@@ -129,13 +118,12 @@ async def create_new_dictionary(dictionary: schemas.DictionaryIn):
         alt_name="NAME_BEL",
         id_dictionary=dic_id
     )
-    attr_id = await create_attr_in_dictionary(attr)
+    await create_attr_in_dictionary(attr)
 
     # Поле наименование
 
     attr = schemas.AttributeDict(
         name="Наименование на английском языке",
-        type=1,
         start_date=dictionary.start_date,
         finish_date=dictionary.finish_date,
         required=True,
@@ -143,11 +131,10 @@ async def create_new_dictionary(dictionary: schemas.DictionaryIn):
         alt_name="NAME_ENG",
         id_dictionary=dic_id
     )
-    attr_id = await create_attr_in_dictionary(attr)
+    await create_attr_in_dictionary(attr)
     # Описание
     attr = schemas.AttributeDict(
         name="Описание",
-        type=1,
         start_date=dictionary.start_date,
         finish_date=dictionary.finish_date,
         required=False,
@@ -156,12 +143,11 @@ async def create_new_dictionary(dictionary: schemas.DictionaryIn):
         id_dictionary=dic_id
     )
 
-    attr_id = await create_attr_in_dictionary(attr)
+    await create_attr_in_dictionary(attr)
 
     # Описание
     attr = schemas.AttributeDict(
         name="Описание на белорусском языке",
-        type=1,
         start_date=dictionary.start_date,
         finish_date=dictionary.finish_date,
         required=False,
@@ -170,12 +156,11 @@ async def create_new_dictionary(dictionary: schemas.DictionaryIn):
         id_dictionary=dic_id
     )
 
-    attr_id = await create_attr_in_dictionary(attr)
+    await create_attr_in_dictionary(attr)
 
     # Описание
     attr = schemas.AttributeDict(
         name="Описание на английском языке",
-        type=1,
         start_date=dictionary.start_date,
         finish_date=dictionary.finish_date,
         required=False,
@@ -183,12 +168,11 @@ async def create_new_dictionary(dictionary: schemas.DictionaryIn):
         alt_name="Descr_ENG",
         id_dictionary=dic_id
     )
-    attr_id = await create_attr_in_dictionary(attr)
+    await create_attr_in_dictionary(attr)
 
     # Описание
     attr = schemas.AttributeDict(
         name="Комментарий",
-        type=1,
         start_date=dictionary.start_date,
         finish_date=dictionary.finish_date,
         required=False,
@@ -196,7 +180,7 @@ async def create_new_dictionary(dictionary: schemas.DictionaryIn):
         alt_name="COMMENT",
         id_dictionary=dic_id
     )
-    attr_id = await create_attr_in_dictionary(attr)
+    await create_attr_in_dictionary(attr)
     return dic_id
 
 
@@ -207,13 +191,13 @@ async def create_attr_in_dictionary(attribute: schemas.AttributeDict):
            'values '
            '(:id_dictionary, :name, :required, :start_date, :finish_date, :alt_name, :type, :capacity) '
            'returning id')
-    attr_id = await database.execute(sql, values=attribute.model_dump())
+    await database.execute(sql, values=attribute.model_dump())
 
 
 async def get_dictionary_structure(dictionary_id: int) -> list[schemas.AttributeIn]:
     logger.debug(f'получаем структуру справочника с id = {dictionary_id}')
     sql = 'select id, name, id_attribute_type, start_date,finish_date,required,capacity, alt_name  from dictionary_attribute where id_dictionary =:id'
-    rows = await database.fetch_all(sql,values={"id":dictionary_id})
+    rows = await database.fetch_all(sql, values={"id": dictionary_id})
     return [schemas.AttributeIn(**dict(row)) for row in rows]
 
     # if dictionary_id is not None:
@@ -290,7 +274,8 @@ async def find_dictionary_position_by_expression(dictionary: int, find_str: str)
                                    attr=schemas.ListAttr(attrs=schemas.AttrShown(name='Название', value='Итого')))
     ]
 
-async def insert_dictionary_values(id_dictionary: int, dataframe) -> True|False:
+
+async def insert_dictionary_values(id_dictionary: int, dataframe) -> True | False:
     try:
         await da.insert_new_values(id_dictionary, dataframe)
         return True

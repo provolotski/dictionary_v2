@@ -15,7 +15,10 @@ logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s %(name)-30s %(levelname
 
 logger = logging.getLogger(__name__)
 
-def try_decode(content, encodings=['utf-8', 'windows-1251', 'cp1252', 'iso-8859-1']):
+
+def try_decode(content, encodings=None):
+    if encodings is None:
+        encodings = ['utf-8', 'windows-1251', 'cp1252', 'iso-8859-1']
     for enc in encodings:
         try:
             logger.debug(f' проверяем кодировку {enc}')
@@ -67,6 +70,7 @@ async def get_dictionary_structure(dictionary: int):
     logger.debug('get получаем структуру справочника')
     return await eisgs_dict.get_dictionary_structure(dictionary)
 
+
 @dict_router.get(path='/add_attribute/', response_model=AttributeDict)
 @dict_router.post(path='/add_attribute/', response_model=AttributeDict)
 async def add_attribute(attribute: AttributeDict):
@@ -80,8 +84,6 @@ async def add_attribute(attribute: AttributeDict):
     return JSONResponse(content={"message": ' errmessage'}, status_code=200)
 
 
-
-
 @dict_router.get(path='/dictionary/')
 @dict_router.post(path='/dictionary/')
 async def get_dictionary(dictionary: int, date: Optional[date] = None):
@@ -92,8 +94,7 @@ async def get_dictionary(dictionary: int, date: Optional[date] = None):
     :return: справочник целиком по структуре
     """
     logger.debug('endpoint получения всех значений справочника')
-    if date is None:
-        date = date.today()
+    date = date if date is not None else date.today()
 
     return await eisgs_dict.get_dictionary_values(dictionary, date)
 
@@ -104,8 +105,7 @@ async def get_dictionary_value_by_code(dictionary: int, code: str, date: Optiona
     logger.debug(f'endpoint получение  значений по коду dictionary ={dictionary}, code={code}, date = {date}')
     if code is None:
         return JSONResponse(content='код не может быть пустым', status_code=404)
-    if date is None:
-        date = date.today()
+    date = date if date is not None else date.today()
     return await eisgs_dict.get_dictionary_position_by_code(dictionary, code, date)
 
 
@@ -115,8 +115,7 @@ async def get_dictionary_value_by_id(dictionary: int, position_id: int, date: Op
     logger.debug(f'endpoint получение  значений по коду dictionary ={dictionary}, id={position_id}, date = {date}')
     if id is None:
         return JSONResponse(content='код не может быть пустым', status_code=404)
-    if date is None:
-        date = date.today()
+    date = date if date is not None else date.today()
     return await eisgs_dict.get_dictionary_position_by_id(dictionary, position_id, date)
 
 
@@ -135,9 +134,9 @@ async def find_dictionary_value(dictionary: int, findstr: str):
 
 
 @dict_router.post(path='/importCSV')
-async def import_csv(dictionary:int, file:UploadFile = File(...)):
+async def import_csv(dictionary: int, file: UploadFile = File(...)):
     if not file.filename.endswith('.csv'):
-        raise HTTPException(status_code=400,detail="Файл должен быть в формате CSV")
+        raise HTTPException(status_code=400, detail="Файл должен быть в формате CSV")
     try:
         contents = await file.read()
         decoded = try_decode(contents)
@@ -152,7 +151,7 @@ async def import_csv(dictionary:int, file:UploadFile = File(...)):
 
 
 @dict_router.post(path='/genRel')
-async def import_csv(dictionary:int):
-        await eisgs_dict.generate_relation(dictionary)
-        return JSONResponse(status_code=200, content={
-                "message": "Файл успешно обработан"})
+async def import_csv(dictionary: int):
+    await eisgs_dict.generate_relation(dictionary)
+    return JSONResponse(status_code=200, content={
+        "message": "Файл успешно обработан"})
