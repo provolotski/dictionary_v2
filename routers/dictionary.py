@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from schemas import DictionaryOut, DictionaryIn, AttributeIn, AttributeDict
 import models.model_dictionary as eisgs_dict
+from models.model_dictionary import DictionaryService
 from typing import Optional
 import io
 
@@ -46,7 +47,7 @@ async def create_new_dictionary(dictionary: DictionaryIn):
         dictionary.id_status = 1
     else:
         dictionary.id_status = 0
-    await eisgs_dict.create_new_dictionary(dictionary)
+    await DictionaryService.create(dictionary)
     return JSONResponse(content={"message": ' errmessage'}, status_code=200)
 
 
@@ -141,7 +142,7 @@ async def import_csv(dictionary: int, file: UploadFile = File(...)):
         contents = await file.read()
         decoded = try_decode(contents)
         df = pd.read_csv(io.StringIO(decoded), dtype=str)
-        if await eisgs_dict.insert_dictionary_values(dictionary, df):
+        if await DictionaryService.insert_dictionary_values(dictionary, df):
             return JSONResponse(status_code=200, content={
                 "message": "Файл успешно обработан"})
         else:
@@ -152,6 +153,8 @@ async def import_csv(dictionary: int, file: UploadFile = File(...)):
 
 @dict_router.post(path='/genRel')
 async def import_csv(dictionary: int):
+    logger.info('start generate relations')
     await eisgs_dict.generate_relation(dictionary)
+    logger.info('finish generate relations')
     return JSONResponse(status_code=200, content={
         "message": "Файл успешно обработан"})

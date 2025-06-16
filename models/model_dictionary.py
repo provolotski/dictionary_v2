@@ -1,15 +1,102 @@
 import datetime
 import logging
+import traceback
+
+from typing import List, Optional
+
+import pandas as pd
+from pydantic import BaseModel
 
 import schemas
 from database import database
 from config import LOG_FILE, LOG_LEVEL
-import models.model_attribute as da
+from  models.model_attribute import AttributeManager
+
 
 logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s %(name)-30s %(levelname)-8s %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S', handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()])
 
 logger = logging.getLogger(__name__)
+
+
+class DictionaryService:
+    REQUIRED_ATTRIBUTES = [
+        {"name": "Наименование", "alt_name": "NAME", "required": True,"id_attribute_type":0},
+        {"name": "Код", "alt_name": "CODE", "required": True,"id_attribute_type":0},
+        {"name": "Код родительской позиции", "alt_name": "PARENT_CODE", "required": True,"id_attribute_type":0},
+        {"name": "Признак полноты итога", "alt_name": "FULL_SUM", "required": True,"id_attribute_type":3},
+        {"name": "Дата начала действия позиции", "alt_name": "START_DATE", "required": True,"id_attribute_type":2},
+        {"name": "Дата окончания действия позиции", "alt_name": "FINISH_DATE", "required": True,"id_attribute_type":2},
+        {"name": "Наименование на белорусском языке", "alt_name": "NAME_BEL", "required": True,"id_attribute_type":0},
+        {"name": "Наименование на английском языке", "alt_name": "NAME_ENG", "required": True,"id_attribute_type":0},
+        {"name": "Описание", "alt_name": "Descr", "required": False,"id_attribute_type":0},
+        {"name": "Описание на белорусском языке", "alt_name": "Descr_BEL", "required": False,"id_attribute_type":0},
+        {"name": "Описание на английском языке", "alt_name": "Descr_ENG", "required": False,"id_attribute_type":0},
+        {"name": "Комментарий", "alt_name": "COMMENT", "required": False,"id_attribute_type":0},
+    ]
+
+    @staticmethod
+    async def get_all()->List[schemas.DictionaryOut]:
+        """Получение всех справочников"""
+
+        sql = "select id, name, code, description,start_date, finish_date, name_eng, name_bel, description_eng, description_bel, gko, organization,classifier,id_status, id_type  from dictionary"
+        rows = await database.fetch_all(sql)
+        return [schemas.DictionaryOut(**dict(row)) for row in rows]
+
+    @staticmethod
+    async def create(dictionary: schemas.DictionaryIn)->int:
+        """
+        Создание справочника
+        :param dictionary:
+        :return:
+        """
+        sql = 'insert into dictionary (name, code, description,start_date, finish_date, change_date, name_eng, name_bel,description_eng, description_bel, gko, organization,classifier,id_status, id_type) values (:name, :code, :description, :start_date, :finish_date, current_date, :name_eng, :name_bel, :description_eng, :description_bel, :gko, :organization, :classifier,:id_status,:id_type) returning id'
+        dict_id = await database.execute(sql, values=dictionary.model_dump())
+
+        # Создаем обязательные параметры
+
+        for attr_config in DictionaryService.REQUIRED_ATTRIBUTES:
+            attr = schemas.AttributeDict(
+                id_dictionary = dict_id,
+                start_date = dictionary.start_date,
+                finish_date = dictionary.finish_date,
+                capacity =250,
+                **attr_config
+            )
+            await DictionaryService._create_attribute(attr)
+
+        logger.info(f"Created dictionary ID: {dict_id}")
+        return dict_id
+
+
+    @staticmethod
+    async def _create_attribute(attribute: schemas.AttributeDict)->int:
+        sql = """
+            INSERT INTO dictionary_attribute (
+                id_dictionary, name, required, start_date, 
+                finish_date, alt_name, id_attribute_type, capacity
+            ) VALUES (
+                :id_dictionary, :name, :required, :start_date,
+                :finish_date, :alt_name, :id_attribute_type, :capacity
+            ) RETURNING id
+        """
+        try:
+            return await database.execute(sql, values=attribute.model_dump())
+        except Exception as e:
+            logger.error(e)
+            logger.error(attribute.model_dump())
+
+    @staticmethod
+    async def insert_dictionary_values(id_dictionary: int, dataframe) -> True | False:
+        try:
+            await AttributeManager.import_data(id_dictionary, dataframe)
+            return True
+        except Exception as e:
+            logger.error(e)
+            return False
+
+
+
 
 
 async def get_dictionaries() -> list[schemas.DictionaryOut]:
@@ -275,14 +362,8 @@ async def find_dictionary_position_by_expression(dictionary: int, find_str: str)
     ]
 
 
-async def insert_dictionary_values(id_dictionary: int, dataframe) -> True | False:
-    try:
-        await da.insert_new_values(id_dictionary, dataframe)
-        return True
-    except Exception as e:
-        logger.error(e)
-        return False
+
 
 
 async def generate_relation(id_dictionary):
-    await da.generate_relations_for_dictionary(id_dictionary)
+    await AttributeManager.generate_relations_for_dictionary(id_dictionary)
