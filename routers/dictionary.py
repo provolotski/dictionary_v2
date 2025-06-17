@@ -2,7 +2,7 @@ from datetime import date
 import logging
 import pandas as pd
 from fastapi.responses import JSONResponse
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 from schemas import DictionaryOut, DictionaryIn, AttributeIn, AttributeDict
 import models.model_dictionary as eisgs_dict
 from models.model_dictionary import DictionaryService
@@ -58,7 +58,7 @@ async def list_dictionaries():
     :return: набор справочников
     """
     logger.debug('получаем список справочников')
-    return await eisgs_dict.get_dictionaries()
+    return await DictionaryService.get_all()
 
 
 @dict_router.get(path='/structure/', response_model=list[AttributeIn])
@@ -69,10 +69,9 @@ async def get_dictionary_structure(dictionary: int):
      :return: набор справочников
      """
     logger.debug('get получаем структуру справочника')
-    return await eisgs_dict.get_dictionary_structure(dictionary)
+    return await DictionaryService.get_dictionary_structure(dictionary)
 
 
-@dict_router.get(path='/add_attribute/', response_model=AttributeDict)
 @dict_router.post(path='/add_attribute/', response_model=AttributeDict)
 async def add_attribute(attribute: AttributeDict):
     """
@@ -81,13 +80,13 @@ async def add_attribute(attribute: AttributeDict):
     :return:
     """
     logger.debug('добавление атрибута в справочник')
-    await  eisgs_dict.create_attr_in_dictionary(attribute)
+    await  DictionaryService.create_attr_in_dictionary(attribute)
     return JSONResponse(content={"message": ' errmessage'}, status_code=200)
 
 
 @dict_router.get(path='/dictionary/')
 @dict_router.post(path='/dictionary/')
-async def get_dictionary(dictionary: int, date: Optional[date] = None):
+async def get_dictionary(dictionary: int, date: date = Query(default_factory=date.today) ):
     """
     Получение всех значений справочника
     :param date: дата на которую нужно получить справочник, если не заполнена - текущая
@@ -95,18 +94,15 @@ async def get_dictionary(dictionary: int, date: Optional[date] = None):
     :return: справочник целиком по структуре
     """
     logger.debug('endpoint получения всех значений справочника')
-    date = date if date is not None else date.today()
-
-    return await eisgs_dict.get_dictionary_values(dictionary, date)
+    return await DictionaryService.get_dictionary_values(dictionary, date)
 
 
 @dict_router.get(path='/dictionaryValueByCode/')
 @dict_router.post(path='/dictionaryValueByCode/')
-async def get_dictionary_value_by_code(dictionary: int, code: str, date: Optional[date] = None):
+async def get_dictionary_value_by_code(dictionary: int, code: str, date: date = Query(default_factory=date.today) ):
     logger.debug(f'endpoint получение  значений по коду dictionary ={dictionary}, code={code}, date = {date}')
     if code is None:
         return JSONResponse(content='код не может быть пустым', status_code=404)
-    date = date if date is not None else date.today()
     return await eisgs_dict.get_dictionary_position_by_code(dictionary, code, date)
 
 

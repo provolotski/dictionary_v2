@@ -95,207 +95,72 @@ class DictionaryService:
             logger.error(e)
             return False
 
+    @staticmethod
+    async def get_dictionary_values(dictionary_id: int, date: datetime.date) -> list[schemas.DictionaryPosition]:
+        """
+        Получение справочника целиком
+        :param dictionary_id:
+        :param date:
+        :return:
+        """
+        logger.debug(f'получение всех значений справочника с id ={dictionary_id}  на дату {date}')
+
+
+        sql = """
+        WITH position_data AS (
+ select
+ 	dp.id,
+    t1.id_parent_positions AS parent_id,
+    t1.value AS parent_code,
+    dp.id_dictionary
+            FROM dictionary_positions dp
+            left join
+            ( select dr.id_positions, dr.id_parent_positions,dd1.value
+            from  dictionary_relations dr 
+            JOIN dictionary_data dd1 ON dd1.id_position = dr.id_positions
+            JOIN dictionary_attribute da1 ON dd1.id_attribute = da1.id AND da1.alt_name = 'PARENT_CODE'
+            ) t1 on (dp.id = t1.id_positions)
+            WHERE dp.id_dictionary = :id_dictionary
+   ),
+        attributes AS (
+   select  pd.id,
+                pd.parent_id,
+                pd.parent_code,
+                da.name AS attr_name,
+                dd.value AS attr_value from position_data pd
+   join dictionary_attribute da  on pd.id_dictionary =da.id_dictionary
+   left outer join dictionary_data dd on (dd.id_position =pd.id and dd.id_attribute =da.id )
+         )
+        SELECT
+            id,
+            parent_id,
+            parent_code,
+            json_agg(
+                json_build_object('name', attr_name, 'value', attr_value)
+            ) AS attrs
+        FROM attributes
+        GROUP BY id, parent_id, parent_code
+        ORDER BY id
+        """
+        rows = await database.fetch_all(sql, {'id_dictionary': dictionary_id})
+        return [schemas.DictionaryPosition(**dict(row)) for row in rows]
+
+    @staticmethod
+    async def get_dictionary_structure(dictionary_id: int) -> list[schemas.AttributeIn]:
+        logger.debug(f'получаем структуру справочника с id = {dictionary_id}')
+        sql = 'select id, name, id_attribute_type, start_date,finish_date,required,capacity, alt_name  from dictionary_attribute where id_dictionary =:id'
+        rows = await database.fetch_all(sql, values={"id": dictionary_id})
+        return [schemas.AttributeIn(**dict(row)) for row in rows]
+
+
+    @staticmethod
+
+    async def create_attr_in_dictionary(attribute: schemas.AttributeDict):
+        logger.debug('create new attribute')
+        await DictionaryService._create_attribute(attribute)
 
 
 
-
-async def get_dictionaries() -> list[schemas.DictionaryOut]:
-    sql = ("select id, name, code, description,start_date, finish_date, name_eng, name_bel,"
-           "description_eng, description_bel, gko, organization,classifier,id_status, id_type  from dictionary")
-    rows = await database.fetch_all(sql)
-    return [schemas.DictionaryOut(**dict(row)) for row in rows]
-
-
-async def create_new_dictionary(dictionary: schemas.DictionaryIn):
-    logger.debug('creating new models')
-    # Создаем справочник
-    sql = ('insert into dictionary (name, code, description,start_date, finish_date, '
-           'change_date, name_eng, name_bel,description_eng, description_bel, gko,'
-           'organization,classifier,id_status, id_type) '
-           'values (:name, :code, :description, :start_date, :finish_date, '
-           'current_date, :name_eng, :name_bel, :description_eng, :description_bel, :gko,'
-           ':organization, :classifier,:id_status,:id_type) returning id')
-    dic_id = await database.execute(sql, values=dictionary.model_dump())
-
-    # Создаем обязательные поля
-    # Поле наименование
-
-    attr = schemas.AttributeDict(
-        name="Наименование",
-        start_date=dictionary.start_date,
-        finish_date=dictionary.finish_date,
-        required=True,
-        capacity=250,
-        alt_name="NAME",
-        id_dictionary=dic_id
-    )
-    await create_attr_in_dictionary(attr)
-    # Код наименование
-    attr = schemas.AttributeDict(
-        name="Код",
-        start_date=dictionary.start_date,
-        finish_date=dictionary.finish_date,
-        required=True,
-        capacity=250,
-        alt_name="CODE",
-        id_dictionary=dic_id
-    )
-
-    await create_attr_in_dictionary(attr)
-    # Код наименование
-    attr = schemas.AttributeDict(
-        name="Код родительской позиции",
-        start_date=dictionary.start_date,
-        finish_date=dictionary.finish_date,
-        required=True,
-        capacity=250,
-        alt_name="PARENT_CODE",
-        id_dictionary=dic_id
-    )
-
-    await create_attr_in_dictionary(attr)
-
-    # Признак полноты
-    attr = schemas.AttributeDict(
-        name="Признак полноты итога",
-        start_date=dictionary.start_date,
-        finish_date=dictionary.finish_date,
-        required=True,
-        capacity=250,
-        alt_name="FULL_SUM",
-        id_dictionary=dic_id
-    )
-
-    await create_attr_in_dictionary(attr)
-
-    # Признак полноты
-    attr = schemas.AttributeDict(
-        name="Дата начала действия позиции",
-        start_date=dictionary.start_date,
-        finish_date=dictionary.finish_date,
-        required=True,
-        capacity=250,
-        alt_name="START_DATE",
-        id_dictionary=dic_id
-    )
-
-    await create_attr_in_dictionary(attr)
-
-    # Признак полноты
-    attr = schemas.AttributeDict(
-        name="Дата окончания действия позиции",
-        start_date=dictionary.start_date,
-        finish_date=dictionary.finish_date,
-        required=True,
-        capacity=250,
-        alt_name="FINISH_DATE",
-        id_dictionary=dic_id
-    )
-
-    await create_attr_in_dictionary(attr)
-
-    # Поле наименование
-
-    attr = schemas.AttributeDict(
-        name="Наименование на белорусском языке",
-        start_date=dictionary.start_date,
-        finish_date=dictionary.finish_date,
-        required=True,
-        capacity=250,
-        alt_name="NAME_BEL",
-        id_dictionary=dic_id
-    )
-    await create_attr_in_dictionary(attr)
-
-    # Поле наименование
-
-    attr = schemas.AttributeDict(
-        name="Наименование на английском языке",
-        start_date=dictionary.start_date,
-        finish_date=dictionary.finish_date,
-        required=True,
-        capacity=250,
-        alt_name="NAME_ENG",
-        id_dictionary=dic_id
-    )
-    await create_attr_in_dictionary(attr)
-    # Описание
-    attr = schemas.AttributeDict(
-        name="Описание",
-        start_date=dictionary.start_date,
-        finish_date=dictionary.finish_date,
-        required=False,
-        capacity=250,
-        alt_name="Descr",
-        id_dictionary=dic_id
-    )
-
-    await create_attr_in_dictionary(attr)
-
-    # Описание
-    attr = schemas.AttributeDict(
-        name="Описание на белорусском языке",
-        start_date=dictionary.start_date,
-        finish_date=dictionary.finish_date,
-        required=False,
-        capacity=250,
-        alt_name="Descr_BEL",
-        id_dictionary=dic_id
-    )
-
-    await create_attr_in_dictionary(attr)
-
-    # Описание
-    attr = schemas.AttributeDict(
-        name="Описание на английском языке",
-        start_date=dictionary.start_date,
-        finish_date=dictionary.finish_date,
-        required=False,
-        capacity=250,
-        alt_name="Descr_ENG",
-        id_dictionary=dic_id
-    )
-    await create_attr_in_dictionary(attr)
-
-    # Описание
-    attr = schemas.AttributeDict(
-        name="Комментарий",
-        start_date=dictionary.start_date,
-        finish_date=dictionary.finish_date,
-        required=False,
-        capacity=250,
-        alt_name="COMMENT",
-        id_dictionary=dic_id
-    )
-    await create_attr_in_dictionary(attr)
-    return dic_id
-
-
-async def create_attr_in_dictionary(attribute: schemas.AttributeDict):
-    logger.debug('create new attribute')
-    sql = ('insert into dictionary_attribute '
-           '(id_dictionary, name, required, start_date, finish_date,  alt_name,id_attribute_type,capacity) '
-           'values '
-           '(:id_dictionary, :name, :required, :start_date, :finish_date, :alt_name, :type, :capacity) '
-           'returning id')
-    await database.execute(sql, values=attribute.model_dump())
-
-
-async def get_dictionary_structure(dictionary_id: int) -> list[schemas.AttributeIn]:
-    logger.debug(f'получаем структуру справочника с id = {dictionary_id}')
-    sql = 'select id, name, id_attribute_type, start_date,finish_date,required,capacity, alt_name  from dictionary_attribute where id_dictionary =:id'
-    rows = await database.fetch_all(sql, values={"id": dictionary_id})
-    return [schemas.AttributeIn(**dict(row)) for row in rows]
-
-    # if dictionary_id is not None:
-    #     return [
-    #         schemas.Attribute(id=1, name='Наименование', type='строка', start_date=datetime.date(1900, 1, 1),
-    #                           end_date=datetime.date(9999, 12, 31),
-    #                           required=True, capacity=56, alt_name='Name'),
-    #         schemas.Attribute(id=1, name='Наименование ENG', type='строка', start_date=datetime.date(1900, 1, 1),
-    #                           end_date=datetime.date(9999, 12, 31),
-    #                           required=True, capacity=56, alt_name='Name_eng')
-    #     ]
 
 
 async def get_dictionary_values(dictionary_id: int, date: datetime.date) -> list[schemas.DictionaryPosition]:

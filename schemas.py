@@ -1,6 +1,7 @@
-from pydantic import BaseModel
-from datetime import date
-from typing import Optional
+from pydantic import BaseModel,Field,validator
+from datetime import date, datetime
+from typing import Optional,List
+import json
 
 
 class DictionaryIn(BaseModel):
@@ -48,7 +49,7 @@ class DictionaryID(BaseModel):
 
 class AttrShown(BaseModel):
     name: str
-    value: str
+    value: Optional[str] =None
 
 
 class ListAttr(BaseModel):
@@ -57,6 +58,23 @@ class ListAttr(BaseModel):
 
 class DictionaryPosition(BaseModel):
     id: int
-    parent_id: int
-    parent_code: str
-    attr: ListAttr
+    parent_id: Optional[int] = Field(None, alias="parent_id")  # Разрешаем NULL
+    parent_code: Optional[str] = Field(None, alias="parent_code")  # Разрешаем NULL
+    attrs: List[AttrShown] = Field(..., alias="attrs")  # Ожидаем список
+
+    @validator('attrs', pre=True)
+    def parse_attrs(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return []
+        return v or []  # Если None - возвращаем пустой список
+
+    class Config:
+        allow_population_by_field_name = True
+        json_encoders = {
+            datetime.date: lambda v: v.isoformat()
+        }
+
+
