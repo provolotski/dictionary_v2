@@ -44,6 +44,18 @@ class DictionaryService:
         return [schemas.DictionaryOut(**dict(row)) for row in rows]
 
     @staticmethod
+    async def find_dictionary_by_name(name: str) -> List[schemas.DictionaryOut]:
+        """
+        Поиск справочника по имени
+        :param name:
+        :return:
+        """
+        logger.debug(f'поиск справочника по имени поисковая строка:{name}')
+        sql = "select id, name, code, description,start_date, finish_date, name_eng, name_bel, description_eng, description_bel, gko, organization,classifier,id_status, id_type  from dictionary where name like '%'||:name||'%'"
+        rows = await database.fetch_all(sql,{'name':name})
+        return [schemas.DictionaryOut(**dict(row)) for row in rows]
+
+    @staticmethod
     async def create(dictionary: schemas.DictionaryIn)->int:
         """
         Создание справочника
@@ -105,7 +117,6 @@ class DictionaryService:
         """
         logger.debug(f'получение всех значений справочника с id ={dictionary_id}  на дату {date}')
 
-
         sql = """
         WITH position_data AS (
  select
@@ -118,7 +129,8 @@ class DictionaryService:
             ( select dr.id_positions, dr.id_parent_positions,dd1.value
             from  dictionary_relations dr 
             JOIN dictionary_data dd1 ON dd1.id_position = dr.id_positions
-            JOIN dictionary_attribute da1 ON dd1.id_attribute = da1.id AND da1.alt_name = 'PARENT_CODE'
+            JOIN dictionary_attribute da1 ON dd1.id_attribute = da1.id AND da1.alt_name = 'PARENT_CODE' 
+            where  :dt between dr.start_date and dr.finish_date and  :dt  between dd1.start_date and dd1.finish_date
             ) t1 on (dp.id = t1.id_positions)
             WHERE dp.id_dictionary = :id_dictionary
    ),
@@ -130,6 +142,7 @@ class DictionaryService:
                 dd.value AS attr_value from position_data pd
    join dictionary_attribute da  on pd.id_dictionary =da.id_dictionary
    left outer join dictionary_data dd on (dd.id_position =pd.id and dd.id_attribute =da.id )
+   where  :dt between dd.start_date and dd.finish_date
          )
         SELECT
             id,
@@ -154,78 +167,169 @@ class DictionaryService:
 
 
     @staticmethod
-
     async def create_attr_in_dictionary(attribute: schemas.AttributeDict):
         logger.debug('create new attribute')
         await DictionaryService._create_attribute(attribute)
 
 
+    @staticmethod
+    async def get_dictionary_position_by_code(dictionary_id: int, code: str, date: datetime.date) -> list[
+        schemas.DictionaryPosition]:
+        """
+        Получение позиции справочника по коду
+        :param dictionary_id:
+        :param code:
+        :param date:
+        :return:
+        """
+
+        logger.debug(f'получение позиции справочника с id = {dictionary_id} по коду {code} на дату {date}')
+        sql = """
+                WITH position_data AS (
+         select
+         	dp.id,
+            t1.id_parent_positions AS parent_id,
+            t1.value AS parent_code,
+            dp.id_dictionary
+                    FROM dictionary_positions dp
+                    left join
+                    ( select dr.id_positions, dr.id_parent_positions,dd1.value
+                    from  dictionary_relations dr 
+                    JOIN dictionary_data dd1 ON dd1.id_position = dr.id_positions
+                    JOIN dictionary_attribute da1 ON dd1.id_attribute = da1.id AND da1.alt_name = 'PARENT_CODE'
+                    where  :dt between dr.start_date and dr.finish_date and  :dt  between dd1.start_date and dd1.finish_date
+                    ) t1 on (dp.id = t1.id_positions)
+                    WHERE dp.id_dictionary = :id_dictionary
+                    and exists (select null from dictionary_data dd, dictionary_attribute da 
+           where dd.id_attribute =da.id and da.alt_name ='CODE' and dd.value  like '%'||:code||'%' and dd.id_position =dp.id and :dt between dd.start_date and dd.finish_date)                    
+           ),
+                attributes AS (
+           select  pd.id,
+                        pd.parent_id,
+                        pd.parent_code,
+                        da.name AS attr_name,
+                        dd.value AS attr_value from position_data pd
+           join dictionary_attribute da  on pd.id_dictionary =da.id_dictionary
+           left outer join dictionary_data dd on (dd.id_position =pd.id and dd.id_attribute =da.id )
+           where  :dt between dd.start_date and dd.finish_date
+                 )
+                SELECT
+                    id,
+                    parent_id,
+                    parent_code,
+                    json_agg(
+                        json_build_object('name', attr_name, 'value', attr_value)
+                    ) AS attrs
+                FROM attributes
+                GROUP BY id, parent_id, parent_code
+                ORDER BY id
+                """
+        rows = await database.fetch_all(sql, {'id_dictionary': dictionary_id,'code':code,'dt':date})
+        return [schemas.DictionaryPosition(**dict(row)) for row in rows]
 
 
 
-async def get_dictionary_values(dictionary_id: int, date: datetime.date) -> list[schemas.DictionaryPosition]:
-    """
-    Получение справочника целиком
-    :param dictionary_id:
-    :param date:
-    :return:
-    """
-    logger.debug(f'получение всех значений справочника с id ={dictionary_id}  на дату {date}')
-    return [
-        schemas.DictionaryPosition(id=1, parent_id=0, parent_code='',
-                                   attr=schemas.ListAttr(attrs=schemas.AttrShown(name='Название', value='Итого')))
-    ]
+
+    @staticmethod
+    async def get_dictionary_position_by_id(dictionary_id: int, id: int,
+                                            date: datetime.date) -> schemas.DictionaryPosition:
+        """
+        Получение позиции справочника по id
+        :param dictionary:
+        :param id:
+        :param date:
+        :return:
+        """
+        logger.debug(f'Получение позиции справочника по ID = {id} из справочника {dictionary_id} на дату {date}')
+        sql = """
+                       WITH position_data AS (
+                select
+                	dp.id,
+                   t1.id_parent_positions AS parent_id,
+                   t1.value AS parent_code,
+                   dp.id_dictionary
+                           FROM dictionary_positions dp
+                           left join
+                           ( select dr.id_positions, dr.id_parent_positions,dd1.value
+                           from  dictionary_relations dr 
+                           JOIN dictionary_data dd1 ON dd1.id_position = dr.id_positions
+                           JOIN dictionary_attribute da1 ON dd1.id_attribute = da1.id AND da1.alt_name = 'PARENT_CODE'
+                           where :dt between dr.start_date and dr.finish_date and  :dt  between dd1.start_date and dd1.finish_date
+                           ) t1 on (dp.id = t1.id_positions)
+                           WHERE dp.id_dictionary = :id_dictionary
+                        and dp.id = :id 
+
+                  ),
+                       attributes AS (
+                  select  pd.id,
+                               pd.parent_id,
+                               pd.parent_code,
+                               da.name AS attr_name,
+                               dd.value AS attr_value from position_data pd
+                  join dictionary_attribute da  on pd.id_dictionary =da.id_dictionary
+                  left outer join dictionary_data dd on (dd.id_position =pd.id and dd.id_attribute =da.id )
+                   where  :dt between dd.start_date and dd.finish_date
+                        )
+                       SELECT
+                           id,
+                           parent_id,
+                           parent_code,
+                           json_agg(
+                               json_build_object('name', attr_name, 'value', attr_value)
+                           ) AS attrs
+                       FROM attributes
+                       GROUP BY id, parent_id, parent_code
+                       ORDER BY id;
+                       """
+        rows = await database.fetch_all(sql, {'id_dictionary': dictionary_id, 'id': id})
+        return [schemas.DictionaryPosition(**dict(row)) for row in rows]
 
 
-async def get_dictionary_position_by_code(dictionary_id: int, code: str, date: datetime.date) -> list[
-    schemas.DictionaryPosition]:
-    """
-    Получение позиции справочника по коду
-    :param dictionary_id:
-    :param code:
-    :param date:
-    :return:
-    """
-    logger.debug(f'получение позиции справочника с id = {dictionary_id} по коду {code} на дату {date}')
-    return [
-        schemas.DictionaryPosition(id=2, parent_id=1, parent_code='100000000',
-                                   attr=schemas.ListAttr(attrs=schemas.AttrShown(name='Название', value='Итого')))
-    ]
 
-
-async def get_dictionary_position_by_id(dictionary: int, id: int, date: datetime.date) -> schemas.DictionaryPosition:
-    """
-    Получение позиции справочника по id
-    :param dictionary: 
-    :param id: 
-    :param date: 
-    :return: 
-    """
-    logger.debug(f'Получение позиции справочника по ID = {id} из справочника {dictionary} на дату {date}')
-    return schemas.DictionaryPosition(id=3, parent_id=1, parent_code='100000000',
-                                      attr=schemas.ListAttr(attrs=schemas.AttrShown(name='Название', value='Итого')))
-
-
-async def find_dictionary_by_name(name: str) -> list[schemas.DictionaryOut]:
-    """
-    Поиск справочника по имени
-    :param name:
-    :return:
-    """
-    logger.debug(f'поиск справочника по имени поисковая строка:{name}')
-    return [
-        schemas.DictionaryOut(id=1, name='справочник 1', code='asdasd', description='asdasdasdasd'),
-        schemas.DictionaryOut(id=2, name='справочник 1', code='asdasd', description='asdasdasdasd')
-    ]
-
-
-async def find_dictionary_position_by_expression(dictionary: int, find_str: str) -> list[schemas.DictionaryPosition]:
+async def find_dictionary_position_by_expression(dictionary: int, find_str: str) -> List[schemas.DictionaryPosition]:
     logger.debug(f'поиск значений справочника по  поисковая строка:{find_str} в справочнике {dictionary}')
-    return [
-        schemas.DictionaryPosition(id=2, parent_id=1, parent_code='100000000',
-                                   attr=schemas.ListAttr(attrs=schemas.AttrShown(name='Название', value='Итого')))
-    ]
-
+    sql = """
+                   WITH position_data AS (
+            select
+            	dp.id,
+               t1.id_parent_positions AS parent_id,
+               t1.value AS parent_code,
+               dp.id_dictionary
+                       FROM dictionary_positions dp
+                       left join
+                       ( select dr.id_positions, dr.id_parent_positions,dd1.value
+                       from  dictionary_relations dr 
+                       JOIN dictionary_data dd1 ON dd1.id_position = dr.id_positions
+                       JOIN dictionary_attribute da1 ON dd1.id_attribute = da1.id AND da1.alt_name = 'PARENT_CODE'
+                       where :dt between dr.start_date and dr.finish_date and  :dt  between dd1.start_date and dd1.finish_date
+                       ) t1 on (dp.id = t1.id_positions)
+                       WHERE dp.id_dictionary = :id_dictionary
+                       and exists (select null from dictionary_data dd 
+                        where dd.value  like '%'||:code||'%' and dd.id_position =dp.id  and :dt between dd.start_date and dd.finish_date)
+              ),
+                   attributes AS (
+              select  pd.id,
+                           pd.parent_id,
+                           pd.parent_code,
+                           da.name AS attr_name,
+                           dd.value AS attr_value from position_data pd
+              join dictionary_attribute da  on pd.id_dictionary =da.id_dictionary
+              left outer join dictionary_data dd on (dd.id_position =pd.id and dd.id_attribute =da.id )
+               where  :dt between dd.start_date and dd.finish_date
+                    )
+                   SELECT
+                       id,
+                       parent_id,
+                       parent_code,
+                       json_agg(
+                           json_build_object('name', attr_name, 'value', attr_value)
+                       ) AS attrs
+                   FROM attributes
+                   GROUP BY id, parent_id, parent_code
+                   ORDER BY id;
+                   """
+    rows = await database.fetch_all(sql, {'id_dictionary': dictionary_id, 'code': code})
+    return [schemas.DictionaryPosition(**dict(row)) for row in rows]
 
 
 

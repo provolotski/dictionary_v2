@@ -103,7 +103,7 @@ async def get_dictionary_value_by_code(dictionary: int, code: str, date: date = 
     logger.debug(f'endpoint получение  значений по коду dictionary ={dictionary}, code={code}, date = {date}')
     if code is None:
         return JSONResponse(content='код не может быть пустым', status_code=404)
-    return await eisgs_dict.get_dictionary_position_by_code(dictionary, code, date)
+    return await DictionaryService.get_dictionary_position_by_code(dictionary, code, date)
 
 
 @dict_router.get(path='/dictionaryValueByID')
@@ -112,15 +112,14 @@ async def get_dictionary_value_by_id(dictionary: int, position_id: int, date: Op
     logger.debug(f'endpoint получение  значений по коду dictionary ={dictionary}, id={position_id}, date = {date}')
     if id is None:
         return JSONResponse(content='код не может быть пустым', status_code=404)
-    date = date if date is not None else date.today()
-    return await eisgs_dict.get_dictionary_position_by_id(dictionary, position_id, date)
+    return await DictionaryService.get_dictionary_position_by_id(dictionary, position_id, date)
 
 
 @dict_router.get(path='/findDictionaryByName')
 @dict_router.post(path='/findDictionaryByName')
 async def find_dictionary_by_name(name: str):
     logger.debug(f'endpoint поиск справочника по имени {name} for')
-    return await eisgs_dict.find_dictionary_by_name(name)
+    return await DictionaryService.find_dictionary_by_name(name)
 
 
 @dict_router.get(path='/findDictionaryValue')
