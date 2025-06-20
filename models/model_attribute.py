@@ -3,14 +3,12 @@ import logging
 from datetime import date
 from typing import List, Optional, Dict, Set
 
-
 import pandas as pd
 import asyncio
 from pandas import NA
 
 from database import database
 from config import LOG_FILE, LOG_LEVEL
-
 
 logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s %(name)-30s %(levelname)-8s %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S', handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()])
@@ -21,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class AttributeManager:
-    NULL_VALUES = ('nan', 'none','null','')
+    NULL_VALUES = ('nan', 'none', 'null', '')
     BATCH_SIZE = 1000
 
     @staticmethod
@@ -61,10 +59,6 @@ class AttributeManager:
                VALUES (:id_position, :id_attribute, :start_date, :finish_date, :value)
            """
         await database.execute_many(sql, data)
-
-
-
-
 
     @staticmethod
     def _dates_overlap(row: dict, parent_row: dict) -> bool:
@@ -124,10 +118,8 @@ class AttributeManager:
             f'position={position_id} '
         )
 
-
-
     @staticmethod
-    async def import_data(dictionary_id: int, df: pd.DataFrame)->None:
+    async def import_data(dictionary_id: int, df: pd.DataFrame) -> None:
         """
         импорт значений справочника из pandas dataframe
         :param dictionary_id: идентификатор справочника

@@ -80,7 +80,7 @@ async def add_attribute(attribute: AttributeDict):
     :return:
     """
     logger.debug('добавление атрибута в справочник')
-    await  DictionaryService.create_attr_in_dictionary(attribute)
+    await  eisgs_dict.create_attr_in_dictionary(attribute)
     return JSONResponse(content={"message": ' errmessage'}, status_code=200)
 
 
