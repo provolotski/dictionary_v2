@@ -285,7 +285,6 @@ class DictionaryService:
         return [schemas.DictionaryPosition(**dict(row)) for row in rows]
 
 
-
 async def find_dictionary_position_by_expression(dictionary: int, find_str: str) -> List[schemas.DictionaryPosition]:
     logger.debug(f'поиск значений справочника по  поисковая строка:{find_str} в справочнике {dictionary}')
     sql = """

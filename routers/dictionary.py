@@ -126,7 +126,7 @@ async def find_dictionary_by_name(name: str):
 @dict_router.post(path='/findDictionaryValue')
 async def find_dictionary_value(dictionary: int, findstr: str):
     logger.debug(f'endpoint поиск значений справочника  по имени {findstr} в справочнике {dictionary}')
-    return await eisgs_dict.find_dictionary_by_name(findstr)
+    return await DictionaryService.find_dictionary_by_name(findstr)
 
 
 @dict_router.post(path='/importCSV')
