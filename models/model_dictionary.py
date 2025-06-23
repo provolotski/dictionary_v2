@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 
 class DictionaryService:
+    # константы
+    DEFAULT_CAPACITY = 250
+
     REQUIRED_ATTRIBUTES = [
         {"name": "Наименование", "alt_name": "NAME", "required": True,"id_attribute_type":0},
         {"name": "Код", "alt_name": "CODE", "required": True,"id_attribute_type":0},
@@ -72,7 +75,7 @@ class DictionaryService:
                 id_dictionary = dict_id,
                 start_date = dictionary.start_date,
                 finish_date = dictionary.finish_date,
-                capacity =250,
+                capacity =DictionaryService.DEFAULT_CAPACITY,
                 **attr_config
             )
             await DictionaryService._create_attribute(attr)
