@@ -124,9 +124,9 @@ async def find_dictionary_by_name(name: str):
 
 @dict_router.get(path='/findDictionaryValue')
 @dict_router.post(path='/findDictionaryValue')
-async def find_dictionary_value(dictionary: int, findstr: str):
+async def find_dictionary_value(dictionary: int, findstr: str, date: Optional[date] = None):
     logger.debug(f'endpoint поиск значений справочника  по имени {findstr} в справочнике {dictionary}')
-    return await DictionaryService.find_dictionary_by_name(findstr)
+    return await DictionaryService.find_dictionary_position_by_expression(dictionary,str,date)
 
 
 @dict_router.post(path='/importCSV')
@@ -144,12 +144,3 @@ async def import_csv(dictionary: int, file: UploadFile = File(...)):
             raise HTTPException(status_code=400, detail="Ошибка обработки файла")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка обработки файла: {str(e)}")
-
-
-@dict_router.post(path='/genRel')
-async def import_csv(dictionary: int):
-    logger.info('start generate relations')
-    await eisgs_dict.generate_relation(dictionary)
-    logger.info('finish generate relations')
-    return JSONResponse(status_code=200, content={
-        "message": "Файл успешно обработан"})
