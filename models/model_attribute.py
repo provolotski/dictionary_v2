@@ -534,7 +534,7 @@ class AttributeManager:
             df.drop(columns=["START_DATE", "FINISH_DATE"], inplace=True)
             valid_attributes = set(attributes_info.keys()) & set(df.columns)
             for attr in valid_attributes:
-                value = str(df[attr])
+                value = str(df[attr][0])
                 clean_value = (
                     None
                     if value.strip().lower() in AttributeManager.NULL_VALUES

@@ -32,7 +32,8 @@ logger = logging.getLogger(__name__)
 def get_current_date():
     """
     Получение текущей даты
-    :return:
+
+    :return: текущая дата
     """
     return datetime_date.today()
 
@@ -40,6 +41,7 @@ def get_current_date():
 async def get_upload_file(file: UploadFile = File(...)) -> UploadFile:  # noqa: B008
     """
     Заглушка для загрузки файла
+
     :param file:
     :return:
     """
@@ -69,11 +71,14 @@ dict_router = APIRouter(prefix="/models", tags=["Dictionary"])
 async def create_new_dictionary(dictionary: DictionaryIn):
     """
     Создаем новый справочник
-    :param dictionary:
+
+    :param dictionary: в качестве параметров запрашивается полное описание справочника
+
     :return:
     """
     logger.debug("создаем новый справочник")
     logger.debug(dictionary.start_date)
+
     if dictionary.start_date <= datetime_date.today() <= dictionary.finish_date:
         dictionary.id_status = 1
     else:
@@ -86,9 +91,11 @@ async def create_new_dictionary(dictionary: DictionaryIn):
 async def edit_dictionary(dictionary_id: int, dictionary: DictionaryIn):
     """
     Редактируем справочник
-    :param dictionary_id:
-    :param dictionary:
-    :dictionary_id: идентификатор справочника
+
+    :param dictionary_id: Идентификатор справочника
+
+    :param dictionary: Обновленная метаинформация о справочнике
+
     :return:
     """
     logger.debug("Редактируем справочник")
@@ -104,13 +111,17 @@ async def edit_dictionary(dictionary_id: int, dictionary: DictionaryIn):
 @dict_router.post("/CreatePosition")
 async def create_position(dictionary_id: int, attrs: List[AttrShown]):
     """
-    Редактируем справочник
-    :param attrs:
+    Создание новой позиции справочника
+
+    :param attrs: массив атрибутов (С учетом проверки на обязательность)
+
     :param dictionary_id: идентификатор справочника
+
     :return:
     """
     logger.debug("Добавляем значение в справочник")
     logger.debug("dictionary: %d", dictionary_id)
+
     await AttributeManager.create_position(dictionary_id, attrs)
     return JSONResponse(content={"message": " все ок"}, status_code=200)
 
@@ -118,13 +129,17 @@ async def create_position(dictionary_id: int, attrs: List[AttrShown]):
 @dict_router.post("/EditPosition")
 async def edit_position(position_id: int, attrs: List[AttrShown]):
     """
-    Редактируем справочник
+    Изменение позиции справочника
+
     :param position_id: Идентификатор позиции
+
     :param attrs: словарь новых значений
     :return:
     """
     logger.debug("Добавляем значение в справочник")
+
     logger.debug("position: %d", position_id)
+
     await AttributeManager.edit_position(position_id, attrs)
     return JSONResponse(content={"message": " все ок"}, status_code=200)
 
@@ -133,6 +148,7 @@ async def edit_position(position_id: int, attrs: List[AttrShown]):
 async def list_dictionaries():
     """
     Получение перечня всех справочников
+
     :return: набор справочников
     """
     logger.debug("получаем список справочников")
@@ -144,7 +160,8 @@ async def list_dictionaries():
 async def get_dictionary_structure(dictionary: int):
     """
     Получение структуры справочника
-    :return: набор справочников
+
+    :return: перечень атрибутов справочника
     """
     logger.debug("get получаем структуру справочника")
     return await DictionaryService.get_dictionary_structure(dictionary)
@@ -154,6 +171,7 @@ async def get_dictionary_structure(dictionary: int):
 async def add_attribute(attribute: AttributeDict):
     """
      Добавление нового атрибута в справочник
+
     :param attribute: описание атрибута
     :return:
     """
@@ -167,7 +185,7 @@ async def add_attribute(attribute: AttributeDict):
 async def get_dictionary_value_by_code(
     dictionary: int,
     code: str,
-    date: datetime_date = Depends(get_current_date),  # noqa: B008
+    date: Optional[datetime_date] = None,  # noqa: B008
 ):
     """
     Получение значений по коду
@@ -183,6 +201,7 @@ async def get_dictionary_value_by_code(
         code,
         str(date),
     )
+    date = date if date is not None else datetime_date.today()
     if code is None:
         return JSONResponse(content="код не может быть пустым", status_code=404)
     return await DictionaryService.get_dictionary_position_by_code(
@@ -209,6 +228,7 @@ async def get_dictionary_value_by_id(
         position_id,
         str(date),
     )
+    date = date if date is not None else datetime_date.today()
     if id is None:
         return JSONResponse(content="код не может быть пустым", status_code=404)
     return await DictionaryService.get_dictionary_position_by_id(
@@ -245,6 +265,7 @@ async def find_dictionary_value(
         findstr,
         dictionary,
     )
+    date = date if date is not None else datetime_date.today()
     return await DictionaryService.find_dictionary_position_by_expression(
         dictionary, findstr, date
     )
@@ -278,8 +299,15 @@ async def import_csv(
 @dict_router.get(path="/dictionary/")
 @dict_router.post(path="/dictionary/")
 async def get_dictionary(
-    dictionary: int, date: datetime_date = Depends(get_current_date)  # noqa: B008
+    dictionary: int, date: Optional[datetime_date] = None  # noqa: B008
 ):
-    """..."""
+    """
+    Получение всех значений справочника
+
+    :param date: дата на которую нужно получить справочник, если не заполнена - текущая
+    :param dictionary: идентификатор справочника
+    :return: справочник целиком по структуре
+    """
     logger.debug("endpoint получения всех значений справочника")
+    date = date if date is not None else datetime_date.today()
     return await DictionaryService.get_dictionary_values(dictionary, date)

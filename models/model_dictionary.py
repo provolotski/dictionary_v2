@@ -447,7 +447,8 @@ class DictionaryService:
                        ORDER BY id;
                        """
         rows = await database.fetch_all(
-            sql, {"id_dictionary": dictionary_id, "id": id_position}
+            sql,
+            {"id_dictionary": dictionary_id, "id": id_position, "dt": date},
         )
         return [schemas.DictionaryPosition(**dict(row)) for row in rows]
 
@@ -509,6 +510,6 @@ class DictionaryService:
                        ORDER BY id;
                        """
         rows = await database.fetch_all(
-            sql, {"id_dictionary": dictionary_id, "code": str, "dt": date}
+            sql, {"id_dictionary": dictionary_id, "code": find_str, "dt": date}
         )
         return [schemas.DictionaryPosition(**dict(row)) for row in rows]

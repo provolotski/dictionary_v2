@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 import logging
 from fastapi import FastAPI, APIRouter
 from routers.dictionary import dict_router
+from routers.dictionary_v1 import dict_router as dict_router1
 from database import database
 from config import LOG_FILE, LOG_LEVEL
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,27 +15,43 @@ from fastapi.openapi.docs import (
 
 from fastapi.staticfiles import StaticFiles
 
-logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s %(name)-30s %(levelname)-8s %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S', handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()])
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format="%(asctime)s %(name)-30s %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()],
+)
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info('Trying connect to database')
+    logger.info("Trying connect to database")
     await database.connect()
-    logger.info('Connected to database')
+    logger.info("Connected to database")
     yield
     await database.disconnect()
-    logger.info('Disconnected from database')
+    logger.info("Disconnected from database")
 
 
 api_router = APIRouter(prefix="/api/v2")
 api_router.include_router(dict_router)
 
-app = FastAPI(lifespan=lifespan, title='Сервис доступа к справочникам ЕИСГС', summary='Справочники ЕИСГС',
-              version='2.0.0', docs_url=None, redoc_url=None)
+api_router_v1 = APIRouter(prefix="/api/v1")
+api_router_v1.include_router(dict_router1)
+
+app = FastAPI(
+    lifespan=lifespan,
+    title="Сервис доступа к справочникам ЕИСГС",
+    summary="Справочники ЕИСГС",
+    version="2.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    swagger_ui_parameters={"syntaxHighlight.theme": "obsidian"},
+    swagger_js_url="/static/swagger/swagger-ui-bundle.js",
+    swagger_css_url="/static/swagger/swagger-ui.css",
+)
 
 
 # Настройка CORS
@@ -75,3 +92,4 @@ async def redoc_html():
 
 
 app.include_router(api_router)
+app.include_router(api_router_v1)
