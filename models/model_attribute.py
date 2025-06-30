@@ -16,15 +16,15 @@ from typing import List, Dict
 
 import pandas as pd
 
-from config import LOG_FILE, LOG_LEVEL
+from config import settings
 from database import database
 from schemas import AttrShown
 
 logging.basicConfig(
-    level=LOG_LEVEL,
-    format="%(asctime)s %(name)-30s %(levelname)-8s %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()],
+    level=settings.log_level,
+    format=settings.log_format,
+    datefmt=settings.log_date,
+    handlers=[logging.FileHandler(settings.log_file), logging.StreamHandler()],
 )
 
 logging.getLogger("databases").setLevel(logging.CRITICAL)

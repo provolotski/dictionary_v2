@@ -17,13 +17,13 @@ from models.model_dictionary import DictionaryService
 from schemas import DictionaryOut, DictionaryIn, AttributeIn, AttributeDict, AttrShown
 
 
-from config import LOG_FILE, LOG_LEVEL
+from config import settings
 
 logging.basicConfig(
-    level=LOG_LEVEL,
-    format="%(asctime)s %(name)-30s %(levelname)-8s %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()],
+    level=settings.log_level,
+    format=settings.log_format,
+    datefmt=settings.log_date,
+    handlers=[logging.FileHandler(settings.log_file), logging.StreamHandler()],
 )
 
 logger = logging.getLogger(__name__)

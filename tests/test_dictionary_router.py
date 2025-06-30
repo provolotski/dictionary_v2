@@ -1,18 +1,18 @@
 import pytest
-from httpx import AsyncClient,ASGITransport
+from httpx import AsyncClient, ASGITransport
 from fastapi import FastAPI
 from unittest.mock import AsyncMock, patch, ANY
 from routers.dictionary import dict_router
-
 
 app = FastAPI()
 app.include_router(dict_router)
 transport = ASGITransport(app=app)
 
+
 @pytest.mark.asyncio
 @patch("routers.dictionary.eisgs_dict.create_new_dictionary", new_callable=AsyncMock)
 async def test_create_new_dictionary(mock_create):
-    payload = { "name": "Test Dictionary", "code": "test_001","description":"test data mock"}
+    payload = {"name": "Test Dictionary", "code": "test_001", "description": "test data mock"}
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         response = await ac.post("/models/newDictionary", json=payload)
 
@@ -35,7 +35,6 @@ async def test_list_dictionaries(mock_list):
 @pytest.mark.asyncio
 @patch("routers.dictionary.eisgs_dict.get_dictionary_structure", return_value=[])
 async def test_get_dictionary_structure(mock_structure):
-
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         response = await ac.get("/models/structure/?dictionary=1")
     assert response.status_code == 200
@@ -96,9 +95,6 @@ async def test_find_dictionary_value(mock_find_value):
     assert response.status_code == 200
     assert response.json() == {"id": 2, "name": "Other"}
     mock_find_value.assert_awaited_once_with("Search")
-
-
-# продолжение существующего файла test_dictionary_router.py
 
 @pytest.mark.asyncio
 @patch("routers.dictionary.eisgs_dict.get_dictionary_structure", return_value=[])

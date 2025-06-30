@@ -1,15 +1,15 @@
 import logging
 from fastapi import APIRouter, Security
-from config import LOG_FILE, LOG_LEVEL
+from config import settings
 from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 
 
 logging.basicConfig(
-    level=LOG_LEVEL,
-    format="%(asctime)s %(name)-30s %(levelname)-8s %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()],
+    level=settings.log_level,
+    format=settings.log_format,
+    datefmt=settings.log_date,
+    handlers=[logging.FileHandler(settings.log_file), logging.StreamHandler()],
 )
 
 logger = logging.getLogger(__name__)
